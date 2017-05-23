@@ -1,0 +1,41 @@
+# =============== #
+# Unity generated #
+# =============== #
+Food Game/[Tt]emp/
+Food Game/[Oo]bj/
+Food Game/[Bb]uilds/
+Food Game/[Ll]ibrary/
+Food Game/[Ll]ibrary_ANDROID/
+Food Game/[Ll]ibrary_PC/
+Food Game/[Ll]ibrary_IOS/
+Food Game/sysinfo.txt
+Food Game/UnityVS/
+Food Game/UnityVS.meta
+Food Game/LightingData*
+Food Game/ReflectionProbe*
+Food Game/Assets/Scenes/Personal Scenes*
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+Food Game/[Ee]xported[Oo]bj/
+Food Game/*.userprefs
+Food Game/*.csproj
+Food Game/*.pidb
+Food Game/*.suo
+Food Game/*.sln*
+Food Game/*.user
+Food Game/*.unityproj
+Food Game/*.booproj
+
+# ============
+# OS generated
+# ============
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Thumbs.db.meta
