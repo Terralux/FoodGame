@@ -5,11 +5,15 @@ using UnityEngine.UI;
 
 public class GameGenerator : MonoBehaviour {
 
+	public delegate void ChangeLanguage(bool languageIsDanish);
+	public static ChangeLanguage ChangeToLanguage;
+
 	public bool findWordToMatchImage = true;
 
 	public GameObject textObject;
 	public GameObject imageObject;
 	public List<VegetableScriptableObject> myVeggies = new List<VegetableScriptableObject>();
+	private List<VegetableScriptableObject> selectedVeggies = new List<VegetableScriptableObject> ();
 
 	private int correctVeggieIndex;
 	private GameObject correct;
@@ -18,17 +22,31 @@ public class GameGenerator : MonoBehaviour {
 	public delegate void ImageClicked(Sprite sprite);
 	public delegate void TextClicked(string name);
 
+	[HideInInspector]
+	public static bool isCurrentlyDanish = true;
+
+	private GameObject questionObject;
+
+	[Range(0,69)]
+	public int veggieCount;
+
 	void Awake () {
+		isCurrentlyDanish = true;
+
 		correct = GameObject.FindGameObjectWithTag ("Correct");
 		wrong = GameObject.FindGameObjectWithTag ("Wrong");
 		correct.SetActive (false);
 		wrong.SetActive (false);
+	}
 
+	public void BeginGame(bool isComparingTextToImages){
+		findWordToMatchImage = isComparingTextToImages;
 		NewQuizRound ();
 	}
 
 	void NewQuizRound(){
 		ShuffleList ();
+		GetVeggieSelection ();
 		GenerateCorrectAnswer ();
 		GenerateIconPlacements ();
 	}
@@ -42,40 +60,61 @@ public class GameGenerator : MonoBehaviour {
 		}
 	}
 
-	void GenerateCorrectAnswer(){
-		correctVeggieIndex = Random.Range (0, myVeggies.Count);
+	void GetVeggieSelection(){
+		selectedVeggies.Clear ();
 
-		GameObject go;
+		if (veggieCount == 0) {
+			selectedVeggies = myVeggies;
+		} else {
+			for (int i = 0; i < veggieCount; i++) {
+				int randomIndex = Random.Range (0, myVeggies.Count);
+
+				while (selectedVeggies.Contains (myVeggies [randomIndex])) {
+					randomIndex = Random.Range (0, myVeggies.Count);
+				}
+
+				selectedVeggies.Add (myVeggies [randomIndex]);
+			}
+		}
+	}
+
+	void GenerateCorrectAnswer(){
+		correctVeggieIndex = Random.Range (0, selectedVeggies.Count);
 
 		if (findWordToMatchImage) {
-			go = Instantiate (imageObject, transform);
-			go.GetComponent<Image> ().sprite = myVeggies [correctVeggieIndex].vegetableImage;
+			questionObject = Instantiate (imageObject, transform);
+			questionObject.GetComponent<Image> ().sprite = selectedVeggies [correctVeggieIndex].vegetableImage;
 		} else {
-			go = Instantiate (textObject, transform);
-			go.GetComponent<Text> ().text = myVeggies [correctVeggieIndex].name;
+			questionObject = Instantiate (textObject, transform);
+			questionObject.GetComponent<Text> ().text = (isCurrentlyDanish ? selectedVeggies [correctVeggieIndex].danishName : selectedVeggies [correctVeggieIndex].englishName);
 		}
 
-		go.transform.localPosition = Vector3.zero;
+		questionObject.transform.localPosition = Vector3.zero;
 	}
 
 	void GenerateIconPlacements(){
-		float angle = 360f / (float)myVeggies.Count;
+		float angle = 360f / (float)selectedVeggies.Count;
 		Vector3 targetVector = Vector3.up;
 
-		for (int i = 0; i < myVeggies.Count; i++) {
+		for (int i = 0; i < selectedVeggies.Count; i++) {
 			targetVector = Quaternion.Euler (0, 0, angle) * targetVector;
 
 			GameObject go;
 
 			if (findWordToMatchImage) {
 				go = Instantiate (textObject, transform);
-				go.GetComponent<Text> ().text = myVeggies [i].name;
-				go.GetComponent<Button> ().onClick.AddListener (go.GetComponent<ClickMethodContainer>().OnClick);
-				Debug.Log (go.GetComponent<Button> ().onClick.GetPersistentEventCount ());
+				ClickMethodContainer cmc = go.GetComponent<ClickMethodContainer> ();
+				go.GetComponent<Text> ().text = (isCurrentlyDanish ? selectedVeggies [i].danishName : selectedVeggies [i].englishName);
+				go.GetComponent<Button> ().onClick.AddListener (cmc.OnClick);
+				cmc.danish = selectedVeggies [i].danishName;
+				cmc.english = selectedVeggies [i].englishName;
+
+				ChangeToLanguage += cmc.UpdateLanguage;
 			} else {
 				go = Instantiate (imageObject, transform);
-				go.GetComponent<Image> ().sprite = myVeggies [i].vegetableImage;
-				go.GetComponent<Button> ().onClick.AddListener (go.GetComponent<ClickMethodContainer>().OnClick);
+				ClickMethodContainer cmc = go.GetComponent<ClickMethodContainer> ();
+				go.GetComponent<Image> ().sprite = selectedVeggies [i].vegetableImage;
+				go.GetComponent<Button> ().onClick.AddListener (cmc.OnClick);
 			}
 
 			go.transform.localPosition = Camera.main.ViewportToScreenPoint (targetVector) * 0.3f;
@@ -83,7 +122,7 @@ public class GameGenerator : MonoBehaviour {
 	}
 
 	public void IGotClicked(Sprite mySprite){
-		if (myVeggies [correctVeggieIndex].vegetableImage == mySprite) {
+		if (selectedVeggies [correctVeggieIndex].vegetableImage == mySprite) {
 			IReceivedAnAnswer(true);
 		} else {
 			IReceivedAnAnswer(false);
@@ -92,7 +131,7 @@ public class GameGenerator : MonoBehaviour {
 
 	public void IGotClicked(string text){
 		Debug.Log (correctVeggieIndex);
-		if (myVeggies [correctVeggieIndex].name == text) {
+		if (selectedVeggies [correctVeggieIndex].danishName == text || selectedVeggies [correctVeggieIndex].englishName == text) {
 			IReceivedAnAnswer(true);
 		} else {
 			IReceivedAnAnswer(false);
@@ -120,8 +159,31 @@ public class GameGenerator : MonoBehaviour {
 	void Clear(){
 		foreach (Transform t in transform.GetComponentsInChildren<Transform>()) {
 			if(t != transform && t != correct && t != wrong){
+				if (t.GetComponent<ClickMethodContainer> () != null) {
+					ChangeToLanguage -= t.GetComponent<ClickMethodContainer> ().UpdateLanguage;
+				}
 				Destroy (t.gameObject);
 			}
 		}
+	}
+
+	public void ChangedLanguage(bool languageIsDanish){
+		isCurrentlyDanish = languageIsDanish;
+
+		if (correct.activeInHierarchy) {
+			correct.GetComponent<ChangeObjectsLanguage> ().UpdateLanguage (languageIsDanish);
+		}
+
+		if (wrong.activeInHierarchy) {
+			wrong.GetComponent<ChangeObjectsLanguage> ().UpdateLanguage (languageIsDanish);
+		}
+
+		if (!findWordToMatchImage) {
+			if (questionObject != null) {
+				questionObject.GetComponent<Text> ().text = (languageIsDanish ? selectedVeggies [correctVeggieIndex].danishName : selectedVeggies [correctVeggieIndex].englishName);
+			}
+		}
+
+		ChangeToLanguage (languageIsDanish);
 	}
 }

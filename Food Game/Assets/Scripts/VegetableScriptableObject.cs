@@ -5,4 +5,6 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "New Vegetable Pair", menuName = "Food Game/New Vegetable Pair", order = 0)]
 public class VegetableScriptableObject : ScriptableObject {
 	public Sprite vegetableImage;
+	public string danishName;
+	public string englishName;
 }
